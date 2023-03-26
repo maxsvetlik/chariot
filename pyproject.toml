@@ -9,6 +9,13 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.9"
 setuptools = "65.5.0" 
+can = "^0.0.0"
+cantools = "^38.0.2"
+func-timeout = "^4.3.5"
+inputs = "^0.5"
+odrive = "^0.6.5.post1"
+pyjoystick = "^1.2.4"
+structlog = "^22.3.0"
 
 
 [build-system]
