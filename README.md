@@ -22,6 +22,10 @@ $ poetry install
 While this package doesn't exactly require Python `3.9` it is strongly recommended in the case that you wish to use ODrive Robotics'
 `odrivetool` front end. This requires a USB connection to the controller, but allows for simple configuration and debugging of the controller.
 
+## Style
+This package requires linting and strongly emphasizes type checking. There are currently some issues with third party libraries and their
+lack of typing support, but it must be used when possible.
+
 ## Package breakdown
 
 ### CanSimplerInterface
