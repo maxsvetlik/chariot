@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "chariot"
+version = "0.1.0"
+description = ""
+authors = ["Maxwell Svetlik <max@maxwellsvetlik.com>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+setuptools = "65.5.0" 
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

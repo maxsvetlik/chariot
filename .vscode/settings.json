@@ -1,0 +1,27 @@
+{
+    "explorer.confirmDragAndDrop": false,
+    "editor.minimap.enabled": false,
+    "workbench.startupEditor": "none",
+    "gitlens.codeLens.enabled": false,
+    "python.defaultInterpreterPath": "/Users/maxwell/venv/py39/bin/python3.9",
+    "python.terminal.activateEnvInCurrentTerminal": true,
+    "editor.defaultFormatter": "ms-python.black-formatter",
+    "window.zoomLevel": -1,
+    "[python]": {
+        "editor.formatOnType": true
+    },
+    "explorer.confirmDelete": false,
+    "editor.formatOnSave": true,
+    "python.linting.flake8Enabled": true,
+    "python.linting.enabled": true,
+    "python.formatting.provider": "black",
+    "python.formatting.blackArgs": [
+        "--experimental-string-processing",
+        "--line-length=120",
+    ],
+    "python.linting.flake8Args": [
+        "--max-line-length=120",
+    ],
+    "python.linting.lintOnSave": true,
+    "black-formatter.importStrategy": "fromEnvironment",
+}
