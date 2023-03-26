@@ -1,12 +1,14 @@
-import time
 from chariot.control.odrive_manager import OdriveMotorManager
+import time
+import structlog
+
+LOG = structlog.get_logger()
 
 if __name__ == "__main__":
-    mgr = OdriveMotorManager(bring_up_interface=False)
+    mgr = OdriveMotorManager()
 
     try:
-        while True:
-            mgr.dump_heartbeat()
-            time.sleep(0.1)
+        msgs = mgr.dump_heartbeat()
+        LOG.info(heartbeats=msgs)
     except KeyboardInterrupt:
         print("Shutdown signal received. Ending execution.")

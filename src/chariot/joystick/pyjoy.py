@@ -6,7 +6,9 @@ from pyjoystick.sdl2 import (
     run_event_loop,
     get_mapping_name,
 )
+import structlog
 
+LOG = structlog.get_logger()
 DEADBAND = 0.1  # Values less than this will register as 0
 
 
@@ -61,11 +63,11 @@ class JoystickController:
 
     def print_add(self, joy):
         self.set_empty_result()
-        print("Added", joy)
+        LOG.info("Added a new gamepad.", joy)
 
     def print_remove(self, joy):
         self.set_empty_result()
-        print("Removed", joy)
+        LOG.info("Remove a gamepad.", joy)
 
     def init_game_pad(self):
         self._devices = Joystick.get_joysticks()
@@ -117,13 +119,10 @@ class JoystickController:
         self.res.born = datetime.datetime.now()
 
     def print_output(self):
-        print(self.res)
-        # print('Key:', key_name, 'Value:', key.value, 'Joystick:', key.joystick)
-        # print(f'received key {key} with value {key.value}')
+        LOG.info(controller_result=self.res)
 
     def get_input(self):
         return self.res
-
 
 if __name__ == "__main__":
     jc = JoystickController()

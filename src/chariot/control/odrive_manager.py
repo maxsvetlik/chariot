@@ -1,6 +1,6 @@
 import dataclasses
 import enum
-from typing import Dict, Sequence
+from typing import Dict, Sequence, Tuple
 
 from .can_simple_interface import CanProtocolSettings, CanSimpleInterface, HeartBeatMsg
 
@@ -68,20 +68,21 @@ class OdriveMotorManager:
     :param can_protocol_settings: the specification for connecting to the CAN bus.
     """
 
+    _kinematics : ChariotKinematics = ChariotKinematics()
+    _axis_ids : Sequence[int] = _kinematics.can_motor_layout.axis_ids
+
     def __init__(
         self, can_protocol_settings: CanProtocolSettings = ChariotProtocolSettings
     ) -> None:
-        self._axis_ids = ChariotKinematics.can_motor_layout.axis_ids
-        self._can_interface = CanSimpleInterface(
-            protocol_settings=can_protocol_settings
-        )
+
+        self._can_interface = CanSimpleInterface(protocol_settings=can_protocol_settings)
+        
 
     def set_motors_active(self) -> None:
         """On the first motor transition from IDLE to CLOSED LOOP CONTROL, we must also set the controller and
         controller profile, if any. For convenience this is set on every state transition."""
-
+        self.set_motors_idle()
         [self._can_interface.set_velocity_control_mode(id) for id in self._axis_ids]
-        [self._can_interface.set_vel_ramp_input_mode(id) for id in self._axis_ids]
         [self._can_interface.set_axis_closed_loop(id) for id in self._axis_ids]
 
     def set_motors_idle(self) -> None:
@@ -98,8 +99,8 @@ class OdriveMotorManager:
             self._can_interface.set_target_velocity(
                 id,
                 velocity
-                * ChariotKinematics.wheel_rotation_mask[
-                    ChariotKinematics.can_motor_layout.axis_ids.index(id)
+                * self._kinematics.wheel_rotation_mask[
+                    self._kinematics.can_motor_layout.axis_ids.index(id)
                 ],
             )
 
@@ -109,21 +110,21 @@ class OdriveMotorManager:
         """A driving model for differential drive wherein the target wheel speed is calculated from the desired
         velocity.
         """
-        length = ChariotKinematics.wheel_base
+        length = self._kinematics.wheel_base
         vel_left = (
             linear_velocity - (length / 2) * angular_velocity
-        ) / ChariotKinematics.wheel_radius
+        ) / self._kinematics.wheel_radius
         vel_right = (
             linear_velocity + (length / 2) * angular_velocity
-        ) / ChariotKinematics.wheel_radius
+        ) / self._kinematics.wheel_radius
 
         # Set the target velocities to the appropriate wheels and apply a mask to correct for motor orientation
         for _, id in enumerate(CanMotorLayout().left_ids):
             self._can_interface.set_target_velocity(
                 id,
                 vel_left
-                * ChariotKinematics.wheel_rotation_mask[
-                    ChariotKinematics.can_motor_layout.axis_ids.index(id)
+                * self._kinematics.wheel_rotation_mask[
+                    self._kinematics.can_motor_layout.axis_ids.index(id)
                 ],
             )
 
@@ -131,8 +132,8 @@ class OdriveMotorManager:
             self._can_interface.set_target_velocity(
                 id,
                 vel_right
-                * ChariotKinematics.wheel_rotation_mask[
-                    ChariotKinematics.can_motor_layout.axis_ids.index(id)
+                * self._kinematics.wheel_rotation_mask[
+                    self._kinematics.can_motor_layout.axis_ids.index(id)
                 ],
             )
 
@@ -140,9 +141,9 @@ class OdriveMotorManager:
         """Return the motor error status for each motor."""
         return [self._can_interface.get_axis_error(id) for id in self._axis_ids]
 
-    def dump_heartbeat(self) -> Sequence[HeartBeatMsg]:
+    def dump_heartbeat(self) -> Sequence[Tuple[int, HeartBeatMsg]]:
         """Return the heartbeat message for each motor."""
-        return [self._can_interface.get_heartbeat(id) for id in self._axis_ids]
+        return [(id, self._can_interface.get_heartbeat(id)) for id in self._axis_ids]
 
-    def clear_motor_errors(self):
+    def clear_motor_errors(self) -> None:
         [self._can_interface.clear_motor_error(id) for id in self._axis_ids]

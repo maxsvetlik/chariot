@@ -7,6 +7,7 @@ import can
 import cantools
 import func_timeout
 import odrive.enums as ctrl_enums
+import structlog
 
 """
 This is a non-comprehensive interface for interaction with the CANSimple protocol that is used by the Odrive Pro and
@@ -20,7 +21,7 @@ commands supported on the ODrive USB interface than are supported on the CAN int
 N.B. this interface uses `odrive.ctrl_enums` which is subject to change after firmware updates. Therefore, this
 library may break after a firmware upgrade.
 """
-
+LOG = structlog.get_logger()
 CAN_BUS = (  # socketcan is explicitly supported by CANSimple. Unfortunately this limits use to Linux.
     "socketcan"
 )
@@ -120,7 +121,7 @@ class CanSimpleInterface:
                 channel=self._protocol_settings.device_id, bustype="socketcan"
             )
         except OSError:
-            print("Could not find interface")
+            LOG.error("Could not find interface")
             raise CANDeviceNotFound
 
     def send(
@@ -134,7 +135,7 @@ class CanSimpleInterface:
             )
             self._bus.send(msg)
         except can.CanError:
-            print("Message NOT sent!")
+            LOG.warn("Message NOT sent!")
             raise MessageSendFailure
 
     """AXIS STATE"""
@@ -260,7 +261,7 @@ class CanSimpleInterface:
         :param axis_id: the can ID of the controller in which to send the command.
         :param arbitrarion_cmd: the message command sent on the bus for data retrieval."""
         while True:
-            msg = can.bus.recv(self._receive_timeout)
+            msg = self._bus.recv(self._receive_timeout)
             if msg.arbitration_id == ((axis_id << 5) | arbitration_cmd):
                 return msg
 
