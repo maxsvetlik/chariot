@@ -25,6 +25,7 @@ MESSAGE_LIFETIME = datetime.timedelta(
 )  # s; the length of time a single message is valid in the
 # absence of another command. This serves as a safety feature in the event connection with the gamepad is lost.
 
+VERBOSE = False
 
 def run_joystick_daemon(jc: JoystickController):
     threading.Thread(target=jc.run).start()
@@ -32,7 +33,8 @@ def run_joystick_daemon(jc: JoystickController):
 
 def get_cmd(msg: XboxControllerResult):
     if datetime.datetime.now() - msg.born >= MESSAGE_LIFETIME:
-        LOG.debug("Last joystick command outside lifecycle. Sending 0 velocity.")
+        if VERBOSE:
+            LOG.debug("Last joystick command outside lifecycle. Sending 0 velocity.")
         return XboxControllerResult()
     return msg.controller
 
@@ -55,7 +57,7 @@ def main():
             time.sleep(0.025)
     except KeyboardInterrupt:
         mgr.set_motors_arc_velocity(0, 0)
-        LOG.infor("Shutdown signal received. Ending execution.")
+        LOG.info("Shutdown signal received. Ending execution.")
 
 
 if __name__ == "__main__":

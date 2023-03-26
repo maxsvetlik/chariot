@@ -1,14 +1,6 @@
-import dataclasses
-import enum
-import os
-from typing import Any, Protocol
-
-import can
-import cantools
-import func_timeout
-import odrive.enums as ctrl_enums
-import structlog
-
+# type:ignore
+# We ignore typing on this file because of the lack of support for typing against the can messaging system and specifically
+# the interaction with the cansimple.dbc.
 """
 This is a non-comprehensive interface for interaction with the CANSimple protocol that is used by the Odrive Pro and
 Odrive S1. The protocol details can be found at https://docs.odriverobotics.com/v/0.5.4/can-protocol.html.
@@ -21,6 +13,18 @@ commands supported on the ODrive USB interface than are supported on the CAN int
 N.B. this interface uses `odrive.ctrl_enums` which is subject to change after firmware updates. Therefore, this
 library may break after a firmware upgrade.
 """
+
+import dataclasses
+import enum
+import os
+from typing import Any, Protocol
+
+import can
+import cantools
+import func_timeout
+import odrive.enums as ctrl_enums
+import structlog
+
 LOG = structlog.get_logger()
 CAN_BUS = (  # socketcan is explicitly supported by CANSimple. Unfortunately this limits use to Linux.
     "socketcan"
@@ -70,24 +74,17 @@ class EncoderEstimateMsg:
 
 @dataclasses.dataclass
 class HeartBeatMsg:
-    controller_flags: ctrl_enums.ControllerError
-    encoder_flags: ctrl_enums.EncoderError
-    motor_flags: ctrl_enums.MotorError
-    axis_state: ctrl_enums.AxisState
-    axis_error: ctrl_enums.AxisError
-
-
-@dataclasses.dataclass
-class MotorState:
-    estimates: EncoderEstimateMsg
-    heartbeat: HeartBeatMsg
-    voltage: float
+    controller_flags: str  # See ctrl_enums.ControllerError
+    encoder_flags: str  # See ctrl_enums.EncoderError
+    motor_flags: str  # See ctrl_enums.MotorError
+    axis_state: str  # See ctrl_enums.AxisState
+    axis_error: str  # See ctrl_enums.AxisError
 
 
 @dataclasses.dataclass
 class CanProtocolSettings(Protocol):
     device_id: str
-    bitrate: int
+    bitrate: str
 
 
 class MessageSendFailure(Exception):
@@ -98,11 +95,6 @@ class CANDeviceNotFound(Exception):
     pass
 
 
-@dataclasses.dataclass
-class MotorStateMsg:
-    pass
-
-
 class CanSimpleInterface:
     """An interface for communicating with devices that support the CANSimpler CAN protocol. It is expected that
     the CAN device is up and available.
@@ -110,11 +102,14 @@ class CanSimpleInterface:
     :param protocol_settings: the specification for connecting to the CAN bus.
     """
 
-    def __init__(self, protocol_settings: CanProtocolSettings) -> None:
+    def __init__(
+        self, protocol_settings: CanProtocolSettings, receive_timeout=1.0
+    ) -> None:
         self._protocol_settings = protocol_settings
         self._db = cantools.database.load_file(
             os.path.dirname(__file__) + "/can/odrive-cansimple.dbc"
         )
+        self._receive_timeout = receive_timeout
 
         try:
             self._bus = can.interface.Bus(
@@ -124,9 +119,7 @@ class CanSimpleInterface:
             LOG.error("Could not find interface")
             raise CANDeviceNotFound
 
-    def send(
-        self, axis_id: bytes, arbitration_id: ArbitrationCommand, data: Any
-    ) -> None:
+    def send(self, axis_id: int, arbitration_id: ArbitrationCommand, data: Any) -> None:
         try:
             msg = can.Message(
                 arbitration_id=arbitration_id.value | axis_id << 5,
@@ -140,18 +133,18 @@ class CanSimpleInterface:
 
     """AXIS STATE"""
 
-    def _set_axis_state(self, axis_id: bytes, axis_state: ctrl_enums.AxisState) -> None:
+    def _set_axis_state(self, axis_id: int, axis_state: ctrl_enums.AxisState) -> None:
         data = self._db.encode_message(
             "Set_Axis_State", {"Axis_Requested_State": axis_state}
         )
         self.send(axis_id, ArbitrationCommand.SET_AXIS_REQUESTED_STATE, data)
 
-    def set_axis_closed_loop(self, axis_id: bytes):
+    def set_axis_closed_loop(self, axis_id: int):
         # An axis in a CLOSED_LOOP state will carry out movement commands that are sent. Some parameters may only
         # be set in when an axis is in IDLE mode.
         self._set_axis_state(axis_id, ctrl_enums.AxisState.CLOSED_LOOP_CONTROL)
 
-    def set_axis_idle(self, axis_id: bytes):
+    def set_axis_idle(self, axis_id: int):
         # An axis in an idle state will not respond to movement commands, even though they may still be sent.
         self._set_axis_state(axis_id, ctrl_enums.AxisState.IDLE)
 
@@ -159,7 +152,7 @@ class CanSimpleInterface:
 
     def _set_control_mode(
         self,
-        axis_id: bytes,
+        axis_id: int,
         ctrl_mode: ctrl_enums.ControlMode,
         input_mode: ctrl_enums.InputMode = ctrl_enums.InputMode.INACTIVE,
     ):
@@ -176,7 +169,7 @@ class CanSimpleInterface:
         )
         self.send(axis_id, ArbitrationCommand.SET_AXIS_REQUESTED_STATE, data)
 
-    def set_velocity_control_mode(self, axis_id: bytes):
+    def set_velocity_control_mode(self, axis_id: int):
         """Sets the velocity control mode with Velocity Ramp as the input mode."""
         self._set_control_mode(
             axis_id,
@@ -186,7 +179,7 @@ class CanSimpleInterface:
 
     def set_position_control_mode(
         self,
-        axis_id: bytes,
+        axis_id: int,
         input_mode: ctrl_enums.InputMode = ctrl_enums.InputMode.INACTIVE,
     ):
         self._set_control_mode(
@@ -195,7 +188,7 @@ class CanSimpleInterface:
 
     def set_torque_control_mode(
         self,
-        axis_id: bytes,
+        axis_id: int,
         input_mode: ctrl_enums.InputMode = ctrl_enums.InputMode.INACTIVE,
     ):
         self._set_control_mode(
@@ -204,7 +197,7 @@ class CanSimpleInterface:
 
     def set_voltage_control_mode(
         self,
-        axis_id: bytes,
+        axis_id: int,
         input_mode: ctrl_enums.InputMode = ctrl_enums.InputMode.INACTIVE,
     ):
         self._set_control_mode(
@@ -214,7 +207,7 @@ class CanSimpleInterface:
     """MOVEMENT TARGETS"""
 
     def set_target_velocity(
-        self, axis_id: bytes, target_vel: float, torque_ff: float = 0.0
+        self, axis_id: int, target_vel: float, torque_ff: float = 0.0
     ) -> None:
         """It is required that the ODrive is in velocity control mode for this command to be meaningful."""
         data = self._db.encode_message(
@@ -224,7 +217,7 @@ class CanSimpleInterface:
 
     def set_target_position(
         self,
-        axis_id: bytes,
+        axis_id: int,
         set_point: float,
         vel_ff: float = 0.0,
         torque_ff: float = 0.0,
@@ -244,36 +237,37 @@ class CanSimpleInterface:
         )
         self.send(axis_id, ArbitrationCommand.SET_INPUT_POS, data)
 
-    def clear_motor_error(self, axis_id: bytes) -> None:
+    def clear_motor_error(self, axis_id: int) -> None:
         """Clear all set errors for a given axis ID.
 
         :param axis_id: the can ID of the controller in which to send the command.
         """
 
-        data = self._db.encode_message("CLEAR_ERRORS")
+        data = self._db.encode_message("Clear_Errors", {})
         self.send(axis_id, ArbitrationCommand.CLEAR_ERRORS, data)
 
     """RECEIVE STATE"""
 
     @func_timeout.func_set_timeout(5.0)
-    def receive(self, axis_id: bytes, arbitration_cmd: Any) -> can.Message:
+    def receive(self, axis_id: int, arbitration_cmd: Any) -> can.Message:
         """Receive a specific message from the bus.
         :param axis_id: the can ID of the controller in which to send the command.
-        :param arbitrarion_cmd: the message command sent on the bus for data retrieval."""
+        :param arbitrarion_cmd: the message command sent on the bus for data retrieval.
+        """
         while True:
             msg = self._bus.recv(self._receive_timeout)
             if msg.arbitration_id == ((axis_id << 5) | arbitration_cmd):
                 return msg
 
-    def get_encoder_estimate(self, axis_id: bytes) -> EncoderEstimateMsg:
+    def get_encoder_estimate(self, axis_id: int) -> EncoderEstimateMsg:
         # As of firmware verion 0.5.4 this message type is sent on the bus at 100Hz
         rx = self.receive(
             axis_id, self._db.get_message_by_name("Get_Encoder_Estimates").frame_id
         )
-        msg = self._db.decode_message("Heartbeat", rx.data)  # type:ignore
+        msg = self._db.decode_message("Get_Encoder_Estimates", rx.data)  # type:ignore
         return EncoderEstimateMsg(msg["Vel_Estimate"], msg["Pos_Estimate"])
 
-    def get_heartbeat(self, axis_id) -> HeartBeatMsg:
+    def get_heartbeat(self, axis_id: int) -> HeartBeatMsg:
         """Get the heartbeat message.
 
         :raises: FunctionTimedOut
@@ -281,38 +275,42 @@ class CanSimpleInterface:
         rx = self.receive(axis_id, self._db.get_message_by_name("Heartbeat").frame_id)
         msg = self._db.decode_message("Heartbeat", rx.data)  # type:ignore
         return HeartBeatMsg(
-            msg["Controller_Flags"],
-            msg["Encoder_Flags"],
-            msg["Motor_Flags"],
-            msg["Axis_State"],
-            msg["Axis_Error"],
+            hex(msg["Controller_Flags"]),
+            hex(msg["Encoder_Flags"]),
+            hex(msg["Motor_Flags"]),
+            hex(msg["Axis_State"]),
+            hex(msg["Axis_Error"]),
         )
 
-    def get_bus_voltage(self, axis_id) -> float:
+    def get_bus_voltage(self, axis_id: int) -> float:
         """Get the bus voltage.
 
         :raises: FunctionTimedOut
         """
-        data = self._db.encode_message("Get_Vbus_Voltage")
-        self.send(axis_id, ArbitrationCommand.GET_VBUS_VOLTAGE, data)
-
+        self.send(axis_id, ArbitrationCommand.GET_VBUS_VOLTAGE, {})
         rx = self.receive(
             axis_id, self._db.get_message_by_name("Get_Vbus_Voltage").frame_id
         )
         msg = self._db.decode_message("Get_Vbus_Voltage", rx.data)  # type:ignore
         return msg["Vbus_Voltage"]
 
-    def get_axis_error(self, axis_id) -> float:
+    def get_motor_error(self, axis_id: int) -> str:
         """Get axis errors from the motor, if any.
 
         :raises: FunctionTimedOut
         """
-
-        data = self._db.encode_message("Get_Motor_Error")
-        self.send(axis_id, ArbitrationCommand.GET_MOTOR_ERROR, data)
-
+        self.send(axis_id, ArbitrationCommand.GET_MOTOR_ERROR, {})
         rx = self.receive(
             axis_id, self._db.get_message_by_name("Get_Motor_Error").frame_id
         )
         msg = self._db.decode_message("Get_Motor_Error", rx.data)  # type:ignore
-        return msg
+        return hex(msg["Motor_Error"])
+
+    def get_encoder_error(self, axis_id: int) -> str:
+        """Get encoder error. N.B. cantools doesn't support use of the RTR feature of CAN, which is
+        required for this data's CAN message, so this message is scraped from the Heartbeat.
+                :raises: FunctionTimedOut
+        """
+
+        heartbeat = self.get_heartbeat(axis_id)
+        return heartbeat.encoder_flags

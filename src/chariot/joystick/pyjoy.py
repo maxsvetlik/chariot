@@ -1,3 +1,6 @@
+"""
+This file is a python-only interpreter for gamepads. It focuses on an XboxOne controller, but could easily be generalized.
+"""
 import datetime
 from dataclasses import dataclass
 import pyjoystick
@@ -74,7 +77,7 @@ class JoystickController:
         self._device = self._devices[0]  # Assumes a single controller connected
         self._monitor = self._device
 
-    def key_received(self, key) -> XboxControllerResult:
+    def key_received(self, key) -> None:
         self.init_game_pad()
         self._monitor.update_key(key)
         key_name = get_mapping_name(key.joystick, key)
@@ -123,6 +126,7 @@ class JoystickController:
 
     def get_input(self):
         return self.res
+
 
 if __name__ == "__main__":
     jc = JoystickController()

@@ -15,6 +15,8 @@ inputs = "^0.5"
 odrive = "^0.6.5.post1"
 pyjoystick = "^1.2.4"
 structlog = "^22.3.0"
+black = "^23.1.0"
+mypy = "^1.1.1"
 
 
 [build-system]
