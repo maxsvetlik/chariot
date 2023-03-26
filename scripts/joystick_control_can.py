@@ -18,7 +18,7 @@ from chariot.joystick import (
 
 LOG = structlog.get_logger()
 
-LINEAR_SPEED_MULTIPLIER = 3  # m/s
+LINEAR_SPEED_MULTIPLIER = 5  # Each integer increase of the multiplier increases velocity by ~0.314 m/s.
 ANGULAR_SPEED_MULTIPLIER = 10  # radians/s
 MESSAGE_LIFETIME = datetime.timedelta(
     seconds=0.2

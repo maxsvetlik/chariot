@@ -52,10 +52,11 @@ class ChariotKinematics:
         -1,
         1,
         1,
-        1,
+        -1,
     ]  # Designates the absolute direction of each motor for a relative movement
     # The layout is [LeftRear, RightRear, RearFront, LeftFront]
     wheel_base: float = 0.4826  # meters
+    mps_per_rotation: float = 0.0398 # m/s velocity for every unit increase in motor rot/s accounting for the gear ratio
 
     @property
     def wheel_radius(self) -> float:
@@ -144,7 +145,7 @@ class OdriveMotorManager:
         ) / self._kinematics.wheel_radius
 
         # Set the target velocities to the appropriate wheels and apply a mask to correct for motor orientation
-        for _, id in enumerate(CanMotorLayout().left_ids):
+        for _, id in enumerate(self._kinematics.can_motor_layout.left_ids):
             self._can_interface.set_target_velocity(
                 id,
                 vel_left
@@ -153,7 +154,7 @@ class OdriveMotorManager:
                 ],
             )
 
-        for _, id in enumerate(CanMotorLayout().right_ids):
+        for _, id in enumerate(self._kinematics.can_motor_layout.right_ids):
             self._can_interface.set_target_velocity(
                 id,
                 vel_right
