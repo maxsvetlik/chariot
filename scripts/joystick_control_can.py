@@ -42,8 +42,8 @@ from chariot.joystick import (
 
 LOG = structlog.get_logger()
 
-LINEAR_SPEED_MULTIPLIER = 5  # Each integer increase of the multiplier increases velocity by ~0.314 m/s.
-ANGULAR_SPEED_MULTIPLIER = 10  # radians/s
+LINEAR_SPEED_MULTIPLIER = 2  # Each integer increase of the multiplier increases velocity by ~0.314 m/s.
+ANGULAR_SPEED_MULTIPLIER = 4  # radians/s
 MESSAGE_LIFETIME = datetime.timedelta(
     seconds=0.2
 )  # s; the length of time a single message is valid in the
@@ -73,6 +73,7 @@ def main():
         mgr.set_motors_active()
         while True:
             controller_res = get_cmd(jc.get_input())
+            print(controller_res)
             target_vel = controller_res.LeftJoystickY
             radius = controller_res.LeftJoystickX
             mgr.set_motors_arc_velocity(
